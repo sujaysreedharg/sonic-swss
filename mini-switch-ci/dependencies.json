@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "checked_at_utc": "2026-10-07T22:12:19Z",
+  "scope": "Official upstream-built ARM64 dependencies for actual complete adapted SWSS compilation; no vendor RTL or ASIC execution",
+  "image": "sonicdev-microsoft.azurecr.io/sonic-slave-bookworm@sha256:f0553eaa83e204edd30b3bcb06bbb353c27d65129a0115b1a0604b646ea36c1a",
+  "image_architecture": "arm64",
+  "image_compressed_bytes": 2798060190,
+  "azure_artifacts": [
+    {
+      "component": "common-libs",
+      "build_id": 1240175,
+      "source_version": "3091f379290eca9560ef18300b0c0527abc643e2",
+      "build_result": "succeeded",
+      "artifact_name": "common-lib.arm64",
+      "artifact_resource_data": "07F5F6424A42AF9868CF9F639B3F650C3DA13F122A1E193F934484FCB97B4A7F01",
+      "artifact_root_id": "A5D50C7F34F394AF13C01FACB67C350B979A485DDA9D464BB18812D3681FE27A02",
+      "packages": [
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 55980,
+          "sha256": "143cdfafe12fa32022cddbc17625c9ee4bb572d29c63f984a21b076c2761c994"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 100280,
+          "sha256": "9171e8c314b49a3ff68b19cdf6c3a5ba7631de6fd2521d241fc4421d781ae5b0"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-cli-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-cli-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 29564,
+          "sha256": "5f137c444b5c01b9b2672d2dfc38258577a94137e6e832f9137bfde150e15ccd"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-cli-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-cli-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 42056,
+          "sha256": "8f871630d89dd9a498069666d1f8105d036fd7c8e16c685788dec4d2854a887f"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-genl-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-genl-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 17380,
+          "sha256": "a3375647d002ac9c9352b1077be0d32b7f1f3f755b0832054decce13b94de00e"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-genl-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-genl-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 17212,
+          "sha256": "b9ad4cc9ccbf3fdc9a40b3deb4b434f0f50f2f336e76810503c140b3881e1f4d"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-nf-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-nf-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 36272,
+          "sha256": "d5b812ae43cfac788ba9d4ff5509dd82547edf797b1655c8a683ab763ec85a1b"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-nf-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-nf-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 36220,
+          "sha256": "889b49d7f95a021aa035b6f95d3a03e997896ac8680d37f5e3f495461a4f63a6"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-route-3-200_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 163380,
+          "sha256": "b56edd7ff95c6a16c34901848a73d441888147d5cbd73d64312c42de44522180"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libnl-route-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "filename": "libnl-route-3-dev_3.7.0-0.2+b1sonic1_arm64.deb",
+          "size": 196336,
+          "sha256": "d57bf545a97031491ce523dc4e50afb8f8af185eaaed3583fc332db488b7eb25"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libyang-dev_3.12.2-1_arm64.deb",
+          "filename": "libyang-dev_3.12.2-1_arm64.deb",
+          "size": 829432,
+          "sha256": "644213f04e94091388220322b5871bdbe6acaf18024dd5541897475d5d8c7c45"
+        },
+        {
+          "archive_path": "common-lib.arm64/target/debs/bookworm/libyang3_3.12.2-1_arm64.deb",
+          "filename": "libyang3_3.12.2-1_arm64.deb",
+          "size": 451572,
+          "sha256": "3c2ec134e95d59eae935f0ebcd756b45fda03157046a5113c01dbbe3693a32be"
+        }
+      ]
+    },
+    {
+      "component": "swss-common",
+      "build_id": 1232536,
+      "source_version": "8a2e71b6523faeae6b0107fe54c22793b0509067",
+      "build_result": "succeeded",
+      "artifact_name": "sonic-swss-common-bookworm.arm64",
+      "artifact_resource_data": "1173AC37BE92ACA243E25D12BE212C86D2CC1C475AE6482F57B64E5AEAFB13B301",
+      "artifact_root_id": "1D733BA5AA4F884D64DC55C02B674DD67DBB404B09CC2D59659DD4D61BA4DA1602",
+      "packages": [
+        {
+          "archive_path": "sonic-swss-common-bookworm.arm64/libswsscommon-dev_1.0.0_arm64.deb",
+          "filename": "libswsscommon-dev_1.0.0_arm64.deb",
+          "size": 63580,
+          "sha256": "150cabef5e37543f654b3e48cd60256ec02b7fb3ccc33c0cdd38a9f49694ad4b"
+        },
+        {
+          "archive_path": "sonic-swss-common-bookworm.arm64/libswsscommon_1.0.0_arm64.deb",
+          "filename": "libswsscommon_1.0.0_arm64.deb",
+          "size": 767508,
+          "sha256": "fd50a4a4fb9e1156e080ce17351c2b083ca24d797c3bdacee43a27fbb5655740"
+        },
+        {
+          "archive_path": "sonic-swss-common-bookworm.arm64/python3-swsscommon_1.0.0_arm64.deb",
+          "filename": "python3-swsscommon_1.0.0_arm64.deb",
+          "size": 860684,
+          "sha256": "19d388594af21acfea9017e41ec583970fec6fc9568ee67a698efa41149344ce"
+        }
+      ]
+    },
+    {
+      "component": "sairedis",
+      "build_id": 1229508,
+      "source_version": "3ee202d5191838f9da4bef25ce0088d36c323fe2",
+      "build_result": "partiallySucceeded",
+      "artifact_name": "sonic-sairedis-bookworm.arm64",
+      "artifact_resource_data": "B940D277B871F7DA481A1F2160CB07BB8933CDE5DCE301EAE4585610CF4BAD5701",
+      "artifact_root_id": "4F43D4E41C0D5A784691B8985A25C7436C7BEC7DF85AED022BDFBBC243558D4302",
+      "packages": [
+        {
+          "archive_path": "sonic-sairedis-bookworm.arm64/libsaimetadata-dev_1.0.0_arm64.deb",
+          "filename": "libsaimetadata-dev_1.0.0_arm64.deb",
+          "size": 58928,
+          "sha256": "a9ac71a6eaadf033fdbbde9909d6821d01349ac50bb4b571117d6c3c5ea8f3f8"
+        },
+        {
+          "archive_path": "sonic-sairedis-bookworm.arm64/libsaimetadata_1.0.0_arm64.deb",
+          "filename": "libsaimetadata_1.0.0_arm64.deb",
+          "size": 1006244,
+          "sha256": "aa3414af3804b11f91330b6b6cd477499f7cc476fe5e21b424a291e2bdb1827a"
+        },
+        {
+          "archive_path": "sonic-sairedis-bookworm.arm64/libsairedis-dev_1.0.0_arm64.deb",
+          "filename": "libsairedis-dev_1.0.0_arm64.deb",
+          "size": 4432,
+          "sha256": "782769e63b479d14098ecd2670a2075b0ea13962e14710e7890f1bbe1d0c06b9"
+        },
+        {
+          "archive_path": "sonic-sairedis-bookworm.arm64/libsairedis_1.0.0_arm64.deb",
+          "filename": "libsairedis_1.0.0_arm64.deb",
+          "size": 553076,
+          "sha256": "be66613941f1a25cf5e8ccaff224f3285d3e6b2b40a58e5959608cc47837553b"
+        },
+        {
+          "archive_path": "sonic-sairedis-bookworm.arm64/libsaivs-dev_1.0.0_arm64.deb",
+          "filename": "libsaivs-dev_1.0.0_arm64.deb",
+          "size": 144972,
+          "sha256": "ddeb97cee19ca297cf36389f0ba4bb43f6c43c6b55a03d09e855d5d4229c16e1"
+        },
+        {
+          "archive_path": "sonic-sairedis-bookworm.arm64/libsaivs_1.0.0_arm64.deb",
+          "filename": "libsaivs_1.0.0_arm64.deb",
+          "size": 718312,
+          "sha256": "fd2df8446eacd56ba6148881665d5c3646a51b71eeb2522821dd7670551892e5"
+        }
+      ]
+    },
+    {
+      "component": "dash-api",
+      "build_id": 1241059,
+      "source_version": "2ce7ce648ee77a76fcf567191eb4b9ed6cfeed38",
+      "build_result": "succeeded",
+      "artifact_name": "sonic-dash-api.arm64",
+      "artifact_resource_data": "91481576206019AECE61DD00AB2A109DEDC0617A6E1FE5760ED0DCD0D754AE5701",
+      "artifact_root_id": "6C8D54BB8EC56EEC8DEEC8456066B2BF6681A6FFCB3889173C3DF80F762AFE3802",
+      "packages": [
+        {
+          "archive_path": "sonic-dash-api.arm64/libdashapi_1.0.0_arm64.deb",
+          "filename": "libdashapi_1.0.0_arm64.deb",
+          "size": 297576,
+          "sha256": "2911407bde80c6ee9db619976e6c1ebc63f93968e610c25a81df3bd7f586b1a4"
+        }
+      ]
+    }
+  ]
+}

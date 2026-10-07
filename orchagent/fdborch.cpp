@@ -1,3 +1,4 @@
+#include "miniswitchl2.h"
 #include <assert.h>
 #include <iostream>
 #include <vector>
@@ -791,6 +792,12 @@ void FdbOrch::doTask(Consumer& consumer)
     SWSS_LOG_ENTER();
 
     string table_name = consumer.getTableName();
+    if (miniswitch::enabled() && table_name != APP_FDB_TABLE_NAME)
+    {
+        SWSS_LOG_ERROR("MiniSwitch rejected unsupported FDB origin/config table: %s", table_name.c_str());
+        consumer.m_toSync.clear();
+        return;
+    }
 
     /* MAC_MOVE_GUARD config consumer is registered against this Orch's
        executor list — dispatch to the embedded guard. It does not require
@@ -826,6 +833,21 @@ void FdbOrch::doTask(Consumer& consumer)
         /* format: <VLAN_name>:<MAC_address> */
         vector<string> keys = tokenize(kfvKey(t), ':', 1);
         string op = kfvOp(t);
+        if (miniswitch::enabled())
+        {
+            bool valid = keys.size() == 2 && miniswitch::vlanName(keys[0]) && miniswitch::macAddress(keys[1]);
+            for (const auto& field : kfvFieldsValues(t))
+            {
+                valid = valid && ((fvField(field) == "port" && miniswitch::physicalPort(fvValue(field))) ||
+                                  (fvField(field) == "type" && fvValue(field) == "static"));
+            }
+            if (!valid || (op != SET_COMMAND && op != DEL_COMMAND))
+            {
+                SWSS_LOG_ERROR("MiniSwitch rejected malformed or unsupported static FDB request: %s", kfvKey(t).c_str());
+                it = consumer.m_toSync.erase(it);
+                continue;
+            }
+        }
 
         Port vlan;
         if (!m_portsOrch->getPort(keys[0], vlan))
@@ -1315,7 +1337,7 @@ void FdbOrch::updatePortOperState(const PortOperStateUpdate& update)
     if (update.operStatus == SAI_PORT_OPER_STATUS_DOWN)
     {
         swss::Port p = update.port;
-        if (gMlagOrch->isMlagInterface(p.m_alias))
+        if (!miniswitch::enabled() && gMlagOrch->isMlagInterface(p.m_alias))
         {
             SWSS_LOG_NOTICE("Ignoring fdb flush on MCLAG port:%s", p.m_alias.c_str());
             return;
@@ -1393,6 +1415,12 @@ bool FdbOrch::addFdbEntry(const FdbEntry& entry, const string& port_name,
     VxlanTunnelOrch* tunnel_orch = gDirectory.get<VxlanTunnelOrch*>();
 
     SWSS_LOG_ENTER();
+    if (miniswitch::enabled() && (!fdbData.remote_ip.empty() ||
+        (fdbData.origin != FDB_ORIGIN_PROVISIONED && fdbData.origin != FDB_ORIGIN_LEARN)))
+    {
+        SWSS_LOG_ERROR("MiniSwitch rejected remote/tunnel FDB state");
+        return false;
+    }
     SWSS_LOG_INFO("mac=%s bv_id=0x%" PRIx64 " port_name=%s type=%s origin=%d remote_ip=%s",
             entry.mac.to_string().c_str(), entry.bv_id, port_name.c_str(),
             fdbData.type.c_str(), fdbData.origin, fdbData.remote_ip.c_str());
@@ -1414,7 +1442,7 @@ bool FdbOrch::addFdbEntry(const FdbEntry& entry, const string& port_name,
 
     /* Assign end point IP only in SIP tunnel scenario since Port + IP address
        needed to uniquely identify Vlan member */
-    if (!tunnel_orch->isDipTunnelsSupported())
+    if (!miniswitch::enabled() && !tunnel_orch->isDipTunnelsSupported())
     {
         end_point_ip = fdbData.remote_ip;
     }
@@ -1771,7 +1799,7 @@ bool FdbOrch::removeFdbEntry(const FdbEntry& entry, FdbOrigin origin)
 
     if (fdbData.origin != origin)
     {
-        if ((origin == FDB_ORIGIN_MCLAG_ADVERTIZED) && (fdbData.origin == FDB_ORIGIN_LEARN) &&
+        if (!miniswitch::enabled() && (origin == FDB_ORIGIN_MCLAG_ADVERTIZED) && (fdbData.origin == FDB_ORIGIN_LEARN) &&
                         (port.m_oper_status == SAI_PORT_OPER_STATUS_DOWN) && (gMlagOrch->isMlagInterface(port.m_alias)))
         {
             //check if the local MCLAG port is down, if yes then continue delete the local MAC

@@ -123,6 +123,8 @@ protected:
     void initDefaultHostIntfTable();
     void initDefaultTrapGroup();
     void initDefaultTrapIds();
+    void initMiniSwitchL2();
+    task_process_status processMiniSwitchL2Rule(const KeyOpFieldsValuesTuple& tuple);
     void initTrapRatePlugin();
     bool isTrapIdSupported(sai_hostif_trap_type_t trap_id) const;
     void updateTrapOperStatus(sai_hostif_trap_type_t trap_type, const std::string& hw_status);

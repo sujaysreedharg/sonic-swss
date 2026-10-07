@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "base_commit": "c65602228bf663c19dbc6a1ea3e2e5684a800af5",
+  "branch": "mini-switch-l2-adapted",
+  "patch_sha256": "c29946a4e6aceb2b24afdf399ebaa17e90593474b86bf145ca9b4376e277f985",
+  "sources": [
+    {
+      "path": "orchagent/Makefile.am",
+      "sha256": "1ebe0cab02f4865ec327e42f56791a194595b0253ad2711f99305d3543eef50d"
+    },
+    {
+      "path": "orchagent/main.cpp",
+      "sha256": "387f5add42ea53c747816d85d86ffca7e1312b6907e3b019229baac461ead712"
+    },
+    {
+      "path": "orchagent/orchdaemon.cpp",
+      "sha256": "451a51bd2627f42ee13b984a102d38da7986228060649b8b8a17370609053466"
+    },
+    {
+      "path": "orchagent/portsorch.cpp",
+      "sha256": "2de36a4eebd92b014f999e9393862128f73392dc222416a4d7b65ff3a9bff149"
+    },
+    {
+      "path": "orchagent/fdborch.cpp",
+      "sha256": "31bde497e8dd67fa167952aa1ef971fc582735cf9e541a39f1db161fc44a9d40"
+    },
+    {
+      "path": "orchagent/crmorch.cpp",
+      "sha256": "c4c2e87f4056a459c9f31acebed38bd6efd753a1e6f36f4d62b0836ce926943d"
+    },
+    {
+      "path": "orchagent/copporch.cpp",
+      "sha256": "f43424ee6bcd45fd3cf841a41051a6b39c429ccfb13b1ddb541b391cf11dbf20"
+    },
+    {
+      "path": "orchagent/copporch.h",
+      "sha256": "45be35dcf32eeb075cf8484c8ad682dc792b555559958f3462abeb89c85a5235"
+    },
+    {
+      "path": "orchagent/miniswitchl2.cpp",
+      "sha256": "1892fef8ecfbe0d8478d586daaff388f3422f69480f40559c74a9ed9b469c31e"
+    },
+    {
+      "path": "orchagent/miniswitchl2.h",
+      "sha256": "789f55ca106580ff2e7997af113f4dc7c89651c4d97bd3c62131c51195e8032e"
+    }
+  ],
+  "full_swss_compile_executed": false,
+  "sonic_boot_executed": false,
+  "status": "UNCOMPILED_SWSS_CANDIDATE_WITH_SEPARATE_NATIVE_POLICY_AND_METHOD_TESTS"
+}

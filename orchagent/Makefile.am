@@ -49,6 +49,8 @@ endif
 
 orchagent_SOURCES = \
             main.cpp \
+            miniswitchl2.cpp \
+            miniswitchl2.h \
             $(top_srcdir)/lib/gearboxutils.cpp \
             $(top_srcdir)/lib/subintf.cpp \
             $(top_srcdir)/lib/recorder.cpp \

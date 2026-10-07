@@ -1,3 +1,4 @@
+#include "miniswitchl2.h"
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
@@ -806,97 +807,101 @@ PortsOrch::PortsOrch(DBConnector *db, DBConnector *stateDb, vector<table_name_wi
     m_queueCounterCapabilitiesTable = unique_ptr<Table>(new Table(m_state_db.get(), STATE_QUEUE_COUNTER_CAPABILITIES_NAME));
     m_portCounterCapabilitiesTable = unique_ptr<Table>(new Table(m_state_db.get(), STATE_PORT_COUNTER_CAPABILITIES_NAME));
 
-    initGearbox();
-
-    string queueWmSha, pgWmSha, portRateSha, nvdaPortTrimSha, portFlrSha, gbPortRateSha;
-    string queueWmPluginName = "watermark_queue.lua";
-    string pgWmPluginName = "watermark_pg.lua";
-    string portRatePluginName = "port_rates.lua";
-    string nvdaPortTrimPluginName = "nvda_port_trim_drop.lua";
-    string portFlrPluginName = "port_flr.lua";
-
-    try
+    if (!miniswitch::enabled())
     {
-        string queueLuaScript = swss::loadLuaScript(queueWmPluginName);
-        queueWmSha = swss::loadRedisScript(m_counter_db.get(), queueLuaScript);
+        initGearbox();
 
-        string pgLuaScript = swss::loadLuaScript(pgWmPluginName);
-        pgWmSha = swss::loadRedisScript(m_counter_db.get(), pgLuaScript);
+        string queueWmSha, pgWmSha, portRateSha, nvdaPortTrimSha, portFlrSha, gbPortRateSha;
+        string queueWmPluginName = "watermark_queue.lua";
+        string pgWmPluginName = "watermark_pg.lua";
+        string portRatePluginName = "port_rates.lua";
+        string nvdaPortTrimPluginName = "nvda_port_trim_drop.lua";
+        string portFlrPluginName = "port_flr.lua";
 
-        string portRateLuaScript = swss::loadLuaScript(portRatePluginName);
-        portRateSha = swss::loadRedisScript(m_counter_db.get(), portRateLuaScript);
-
-        string nvdaPortTrimLuaScript = swss::loadLuaScript(nvdaPortTrimPluginName);
-        nvdaPortTrimSha = swss::loadRedisScript(m_counter_db.get(), nvdaPortTrimLuaScript);
-
-        string portFlrLuaScript = swss::loadLuaScript(portFlrPluginName);
-        portFlrSha = swss::loadRedisScript(m_counter_db.get(), portFlrLuaScript);
-
-        if (m_gearboxEnabled && m_gb_counter_db)
+        try
         {
-            string gbportRateLuaScript = swss::loadLuaScript(portRatePluginName);
-            gbPortRateSha = swss::loadRedisScript(m_gb_counter_db.get(), gbportRateLuaScript);
+            string queueLuaScript = swss::loadLuaScript(queueWmPluginName);
+            queueWmSha = swss::loadRedisScript(m_counter_db.get(), queueLuaScript);
 
-            // Register plugin for gearbox flex counter group
-            setFlexCounterGroupParameter(PORT_STAT_COUNTER_FLEX_COUNTER_GROUP,
-                                        PORT_RATE_FLEX_COUNTER_POLLING_INTERVAL_MS,
-                                        STATS_MODE_READ,
-                                        PORT_PLUGIN_FIELD,
-                                        gbPortRateSha,
-                                        "",        // operation
-                                        true);     // is_gearbox = true
+            string pgLuaScript = swss::loadLuaScript(pgWmPluginName);
+            pgWmSha = swss::loadRedisScript(m_counter_db.get(), pgLuaScript);
+
+            string portRateLuaScript = swss::loadLuaScript(portRatePluginName);
+            portRateSha = swss::loadRedisScript(m_counter_db.get(), portRateLuaScript);
+
+            string nvdaPortTrimLuaScript = swss::loadLuaScript(nvdaPortTrimPluginName);
+            nvdaPortTrimSha = swss::loadRedisScript(m_counter_db.get(), nvdaPortTrimLuaScript);
+
+            string portFlrLuaScript = swss::loadLuaScript(portFlrPluginName);
+            portFlrSha = swss::loadRedisScript(m_counter_db.get(), portFlrLuaScript);
+
+            if (m_gearboxEnabled && m_gb_counter_db)
+            {
+                string gbportRateLuaScript = swss::loadLuaScript(portRatePluginName);
+                gbPortRateSha = swss::loadRedisScript(m_gb_counter_db.get(), gbportRateLuaScript);
+
+                // Register plugin for gearbox flex counter group
+                setFlexCounterGroupParameter(PORT_STAT_COUNTER_FLEX_COUNTER_GROUP,
+                                            PORT_RATE_FLEX_COUNTER_POLLING_INTERVAL_MS,
+                                            STATS_MODE_READ,
+                                            PORT_PLUGIN_FIELD,
+                                            gbPortRateSha,
+                                            "",        // operation
+                                            true);     // is_gearbox = true
+            }
         }
-    }
-    catch (const runtime_error &e)
-    {
-        SWSS_LOG_ERROR("Port flex counter groups were not set successfully: %s", e.what());
-    }
-
-    // Build portStatPlugins string, only adding non-empty plugin SHAs
-    std::string portStatPlugins;
-    if (!portRateSha.empty())
-    {
-        portStatPlugins = portRateSha;
-    }
-    if (!portFlrSha.empty())
-    {
-        if (!portStatPlugins.empty())
+        catch (const runtime_error &e)
         {
-            portStatPlugins += ",";
+            SWSS_LOG_ERROR("Port flex counter groups were not set successfully: %s", e.what());
         }
-        portStatPlugins += portFlrSha;
+
+        // Build portStatPlugins string, only adding non-empty plugin SHAs
+        std::string portStatPlugins;
+        if (!portRateSha.empty())
+        {
+            portStatPlugins = portRateSha;
+        }
+        if (!portFlrSha.empty())
+        {
+            if (!portStatPlugins.empty())
+            {
+                portStatPlugins += ",";
+            }
+            portStatPlugins += portFlrSha;
+        }
+
+        // Nvidia custom trim stat calculation
+        if (isMlnxPlatform() && \
+            isPortStatSupported(SAI_PORT_STAT_TRIM_PACKETS) && \
+            isPortStatSupported(SAI_PORT_STAT_TX_TRIM_PACKETS) && \
+            !isPortStatSupported(SAI_PORT_STAT_DROPPED_TRIM_PACKETS))
+        {
+            portStatPlugins += "," + nvdaPortTrimSha;
+        }
+
+        setFlexCounterGroupParameter(QUEUE_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP,
+                                     QUEUE_WATERMARK_FLEX_STAT_COUNTER_POLL_MSECS,
+                                     STATS_MODE_READ_AND_CLEAR,
+                                     QUEUE_PLUGIN_FIELD,
+                                     queueWmSha);
+
+        setFlexCounterGroupParameter(PG_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP,
+                                     PG_WATERMARK_FLEX_STAT_COUNTER_POLL_MSECS,
+                                     STATS_MODE_READ_AND_CLEAR,
+                                     PG_PLUGIN_FIELD,
+                                     pgWmSha);
+
+        setFlexCounterGroupParameter(PORT_STAT_COUNTER_FLEX_COUNTER_GROUP,
+                                     PORT_RATE_FLEX_COUNTER_POLLING_INTERVAL_MS,
+                                     STATS_MODE_READ,
+                                     PORT_PLUGIN_FIELD,
+                                     portStatPlugins);
+
+        setFlexCounterGroupParameter(PG_DROP_STAT_COUNTER_FLEX_COUNTER_GROUP,
+                                     PG_DROP_FLEX_STAT_COUNTER_POLL_MSECS,
+                                     STATS_MODE_READ);
+
     }
-
-    // Nvidia custom trim stat calculation
-    if (isMlnxPlatform() && \
-        isPortStatSupported(SAI_PORT_STAT_TRIM_PACKETS) && \
-        isPortStatSupported(SAI_PORT_STAT_TX_TRIM_PACKETS) && \
-        !isPortStatSupported(SAI_PORT_STAT_DROPPED_TRIM_PACKETS))
-    {
-        portStatPlugins += "," + nvdaPortTrimSha;
-    }
-
-    setFlexCounterGroupParameter(QUEUE_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP,
-                                 QUEUE_WATERMARK_FLEX_STAT_COUNTER_POLL_MSECS,
-                                 STATS_MODE_READ_AND_CLEAR,
-                                 QUEUE_PLUGIN_FIELD,
-                                 queueWmSha);
-
-    setFlexCounterGroupParameter(PG_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP,
-                                 PG_WATERMARK_FLEX_STAT_COUNTER_POLL_MSECS,
-                                 STATS_MODE_READ_AND_CLEAR,
-                                 PG_PLUGIN_FIELD,
-                                 pgWmSha);
-
-    setFlexCounterGroupParameter(PORT_STAT_COUNTER_FLEX_COUNTER_GROUP,
-                                 PORT_RATE_FLEX_COUNTER_POLLING_INTERVAL_MS,
-                                 STATS_MODE_READ,
-                                 PORT_PLUGIN_FIELD,
-                                 portStatPlugins);
-
-    setFlexCounterGroupParameter(PG_DROP_STAT_COUNTER_FLEX_COUNTER_GROUP,
-                                 PG_DROP_FLEX_STAT_COUNTER_POLL_MSECS,
-                                 STATS_MODE_READ);
 
     /* Get CPU port */
     this->initializeCpuPort();
@@ -4841,7 +4846,11 @@ void PortsOrch::doPortTask(Consumer &consumer)
                 continue;
             }
 
-            if (!gBufferOrch->isPortReady(pCfg.key))
+            Port fixedPort;
+            const bool ready = miniswitch::enabled()
+                ? (getPort(pCfg.key, fixedPort) && fixedPort.m_init && fixedPort.m_hif_id != SAI_NULL_OBJECT_ID)
+                : gBufferOrch->isPortReady(pCfg.key);
+            if (!ready)
             {
                 // buffer configuration hasn't been applied yet. save it for future retry
                 m_pendingPortSet.emplace(pCfg.key);
@@ -6032,7 +6041,12 @@ void PortsOrch::doVlanMemberTask(Consumer &consumer)
                 {
 		    if (getBridgePortReferenceCount(port) == 0)
                     {
-                        removeBridgePort(port);
+                        if (miniswitch::enabled() && !removeBridgePort(port))
+                        {
+                            ++it;
+                            continue;
+                        }
+                        if (!miniswitch::enabled()) removeBridgePort(port);
                     }
                     it = consumer.m_toSync.erase(it);
                 }
@@ -6551,7 +6565,7 @@ void PortsOrch::postPortInit(Port& p)
 
     if (gMySwitchType != "dpu")
     {
-        initializePortBufferMaximumParameters(p);
+        if (!miniswitch::enabled()) initializePortBufferMaximumParameters(p);
     }
 
     // We have to test the size of m_queue_ids here since it isn't initialized on some platforms (like DPU)
@@ -6566,13 +6580,12 @@ void PortsOrch::postPortInit(Port& p)
 
 void PortsOrch::doTask()
 {
-    auto tableOrder = {
-        APP_PORT_TABLE_NAME,
-        APP_LAG_TABLE_NAME,
-        APP_LAG_MEMBER_TABLE_NAME,
-        APP_VLAN_TABLE_NAME,
-        APP_VLAN_MEMBER_TABLE_NAME
+    vector<string> tableOrder = {
+        APP_PORT_TABLE_NAME, APP_LAG_TABLE_NAME, APP_LAG_MEMBER_TABLE_NAME,
+        APP_VLAN_TABLE_NAME, APP_VLAN_MEMBER_TABLE_NAME
     };
+    if (miniswitch::enabled())
+        tableOrder = {APP_PORT_TABLE_NAME, APP_VLAN_TABLE_NAME, APP_VLAN_MEMBER_TABLE_NAME};
 
     for (auto tableName: tableOrder)
     {
@@ -6598,6 +6611,31 @@ void PortsOrch::doTask(Consumer &consumer)
 
     string table_name = consumer.getTableName();
 
+    if (miniswitch::enabled())
+    {
+        for (auto it = consumer.m_toSync.begin(); it != consumer.m_toSync.end();)
+        {
+            const auto& tuple = it->second;
+            string error;
+            miniswitch::Row row;
+            for (const auto& field : kfvFieldsValues(tuple))
+            {
+                if (!row.emplace(fvField(field), fvValue(field)).second) error = "Duplicate port field";
+            }
+            if (table_name == APP_PORT_TABLE_NAME && error.empty())
+                error = miniswitch::portUpdateError(kfvKey(tuple), kfvOp(tuple), row);
+            else if (table_name != APP_VLAN_TABLE_NAME && table_name != APP_VLAN_MEMBER_TABLE_NAME && table_name != APP_PORT_TABLE_NAME)
+                error = "Unsupported MiniSwitch port operation table: " + table_name;
+            if (!error.empty())
+            {
+                SWSS_LOG_ERROR("MiniSwitch port operation rejected: %s", error.c_str());
+                miniswitch::publishStatus(m_state_db.get(), false, error);
+                it = consumer.m_toSync.erase(it);
+            }
+            else ++it;
+        }
+    }
+
     if (table_name == STATE_TRANSCEIVER_INFO_TABLE_NAME)
     {
         doTransceiverPresenceCheck(consumer);
@@ -6605,7 +6643,7 @@ void PortsOrch::doTask(Consumer &consumer)
     else if (table_name == APP_PORT_TABLE_NAME)
     {
         doPortTask(consumer);
-        flushCounters();
+        if (!miniswitch::enabled()) flushCounters();
     }
     else if (table_name == APP_SEND_TO_INGRESS_PORT_TABLE_NAME)
     {
@@ -6857,7 +6895,7 @@ void PortsOrch::initializePortMtuBulk(std::vector<Port>& ports)
             auto mtu = attr.value.u32 - (uint32_t)(sizeof(struct ether_header) + FCS_LEN + VLAN_TAG_LEN);
 
             /* Reduce the default MTU got from ASIC by MAX_MACSEC_SECTAG_SIZE */
-            if (mtu > MAX_MACSEC_SECTAG_SIZE)
+            if (mtu > MAX_MACSEC_SECTAG_SIZE && (!miniswitch::enabled() || isMACsecPort(port.m_port_id)))
             {
                 mtu -= MAX_MACSEC_SECTAG_SIZE;
             }
@@ -7419,7 +7457,12 @@ bool PortsOrch::removeBridgePort(Port &port)
     }
     
     /* Remove STP ports before bridge port deletion*/
-    gStpOrch->removeStpPorts(port);
+    if (!miniswitch::enabled()) gStpOrch->removeStpPorts(port);
+    else if (port.m_stp_id != -1)
+    {
+        SWSS_LOG_ERROR("MiniSwitch cannot remove a bridge with STP state");
+        return false;
+    }
 
     //Flush the FDB entires corresponding to the port
     gFdbOrch->flushFDBEntries(port.m_bridge_port_id, SAI_NULL_OBJECT_ID);
@@ -7566,6 +7609,11 @@ bool PortsOrch::removeVlan(Port vlan)
     /* If STP instance is associated with VLAN remove VLAN from STP before deletion */
     if(vlan.m_stp_id != -1)
     {
+        if (miniswitch::enabled())
+        {
+            SWSS_LOG_ERROR("MiniSwitch cannot remove a VLAN with STP state");
+            return false;
+        }
         gStpOrch->removeVlanFromStpInstance(vlan.m_alias, 0);
     }
 
@@ -9929,26 +9977,34 @@ void PortsOrch::updatePortOperStatus(Port &port, sai_port_oper_status_t status)
     }
     SWSS_LOG_INFO("Updating the nexthop for port %s and operational status %s", port.m_alias.c_str(), isUp ? "up" : "down");
 
-    if (!gNeighOrch->ifChangeInformNextHop(port.m_alias, isUp))
+    if (!miniswitch::enabled())
     {
-        SWSS_LOG_WARN("Inform nexthop operation failed for interface %s", port.m_alias.c_str());
-    }
-    for (const auto &child_port : port.m_child_ports)
-    {
-        if (!gNeighOrch->ifChangeInformNextHop(child_port, isUp))
+        if (!gNeighOrch->ifChangeInformNextHop(port.m_alias, isUp))
         {
-            SWSS_LOG_WARN("Inform nexthop operation failed for sub interface %s", child_port.c_str());
+            SWSS_LOG_WARN("Inform nexthop operation failed for interface %s", port.m_alias.c_str());
         }
-    }
-
-    if(isVoqChassisDbInUse())
-    {
-        if (gIntfsOrch->isLocalSystemPortIntf(port.m_alias))
+        for (const auto &child_port : port.m_child_ports)
         {
-            gIntfsOrch->voqSyncIntfState(port.m_alias, isUp);
+            if (!gNeighOrch->ifChangeInformNextHop(child_port, isUp))
+            {
+                SWSS_LOG_WARN("Inform nexthop operation failed for sub interface %s", child_port.c_str());
+            }
         }
-    }
 
+        if(isVoqChassisDbInUse())
+        {
+            if (gIntfsOrch->isLocalSystemPortIntf(port.m_alias))
+            {
+                gIntfsOrch->voqSyncIntfState(port.m_alias, isUp);
+            }
+        }
+
+
+    }
+    else if (!port.m_child_ports.empty() || port.m_rif_id != SAI_NULL_OBJECT_ID)
+    {
+        throw runtime_error("MiniSwitch fixed L2 received routed/child-port state");
+    }
 
     PortOperStateUpdate update = {port, status};
     notify(SUBJECT_TYPE_PORT_OPER_STATE_CHANGE, static_cast<void *>(&update));

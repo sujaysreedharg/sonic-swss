@@ -1,3 +1,4 @@
+#include "miniswitchl2.h"
 #include <unistd.h>
 #include <unordered_map>
 #include <chrono>
@@ -29,6 +30,7 @@ using namespace swss;
 #define APP_FABRIC_MONITOR_DATA_TABLE_NAME      "FABRIC_MONITOR_TABLE"
 
 extern sai_switch_api_t*           sai_switch_api;
+extern sai_port_api_t*             sai_port_api;
 extern sai_object_id_t             gSwitchId;
 extern string                      gMySwitchType;
 extern string                      gMySwitchSubType;
@@ -202,6 +204,16 @@ bool OrchDaemon::init()
 
     g_events_handle = events_init_publisher("sonic-events-swss");
 
+    if (miniswitch::enabled())
+    {
+        string reason;
+        if (WarmStart::isWarmStart() || gMySwitchType != "npu" ||
+            !miniswitch::validateDatabase(m_configDb, reason))
+        {
+            miniswitch::publishStatus(m_stateDb, false, reason);
+            return false;
+        }
+    }
     gCrmOrch = new CrmOrch(m_configDb, CFG_CRM_TABLE_NAME);
 
     // Construct the NotificationConsumer stats publisher before any
@@ -229,6 +241,7 @@ bool OrchDaemon::init()
         app_switch_table
     };
 
+    if (miniswitch::enabled()) switch_tables = {app_switch_table};
     gSwitchOrch = new SwitchOrch(m_applDb, switch_tables, stateDbSwitchTable);
 
     const int portsorch_base_pri = 40;
@@ -248,11 +261,34 @@ bool OrchDaemon::init()
         { APP_MCLAG_FDB_TABLE_NAME,  FdbOrch::fdborch_pri}
     };
 
+    if (miniswitch::enabled())
+    {
+        ports_tables = {
+            {APP_PORT_TABLE_NAME, portsorch_base_pri + 5},
+            {APP_VLAN_TABLE_NAME, portsorch_base_pri + 2},
+            {APP_VLAN_MEMBER_TABLE_NAME, portsorch_base_pri}
+        };
+        app_fdb_tables = {{APP_FDB_TABLE_NAME, FdbOrch::fdborch_pri}};
+    }
     gPortsOrch = new PortsOrch(m_applDb, m_stateDb, ports_tables, m_chassisAppDb);
     TableConnector stateDbFdb(m_stateDb, STATE_FDB_TABLE_NAME);
     TableConnector stateMclagDbFdb(m_stateDb, STATE_MCLAG_REMOTE_FDB_TABLE_NAME);
     gFdbOrch = new FdbOrch(m_applDb, app_fdb_tables, stateDbFdb, stateMclagDbFdb, gPortsOrch,
                            m_configDb);
+
+    if (miniswitch::enabled())
+    {
+        // PortsOrch requires a real descriptor, with all counter producers disabled.
+        vector<string> noCounterConsumers;
+        auto* flexCounterOrch = new FlexCounterOrch(m_configDb, noCounterConsumers);
+        gDirectory.set(flexCounterOrch);
+        gDirectory.set(gPortsOrch);
+        gCoppOrch = new CoppOrch(m_applDb, APP_COPP_TABLE_NAME);
+        m_orchList = {gSwitchOrch, gCrmOrch, gPortsOrch, gCoppOrch,
+                      gFdbOrch, flexCounterOrch, gNotifConsumerStatsOrch};
+        miniswitch::publishStatus(m_stateDb, true, "fixed L2 orchestration graph constructed");
+        return true;
+    }
 
     TableConnector stateDbBfdSessionTable(m_stateDb, STATE_BFD_SESSION_TABLE_NAME);
 
@@ -984,6 +1020,30 @@ void OrchDaemon::start(long heartBeatInterval)
             break;
         }
 
+        if (miniswitch::enabled())
+        {
+            string reason;
+            if (!miniswitch::validateDatabase(m_configDb, reason))
+            {
+                miniswitch::publishStatus(m_stateDb, false, reason);
+                SWSS_LOG_ERROR("MiniSwitch incremental CONFIG_DB rejected: %s", reason.c_str());
+                // Stop admitted traffic before ending the dedicated cold-only instance.
+                for (const auto& item : gPortsOrch->getAllPorts())
+                {
+                    if (item.second.m_type == Port::PHY)
+                    {
+                        sai_attribute_t down;
+                        down.id = SAI_PORT_ATTR_ADMIN_STATE;
+                        down.value.booldata = false;
+                        const auto status = sai_port_api->set_port_attribute(item.second.m_port_id, &down);
+                        if (status != SAI_STATUS_SUCCESS)
+                            SWSS_LOG_ERROR("MiniSwitch failed to disable rejected profile port: %d", status);
+                    }
+                }
+                throw runtime_error("MiniSwitch requires valid configuration and a cold restart");
+            }
+        }
+
         auto tend = std::chrono::high_resolution_clock::now();
         heartBeat(tend, heartBeatInterval);
 
@@ -1149,6 +1209,11 @@ void exit_if_graceful_shutdown_requested(void (*exit_fn)(int))
 bool OrchDaemon::warmRestoreAndSyncUp()
 {
     SWSS_LOG_ENTER();
+    if (miniswitch::enabled())
+    {
+        SWSS_LOG_ERROR("MiniSwitch warm restore is unsupported");
+        return false;
+    }
 
     WarmStart::setWarmStartState("orchagent", WarmStart::INITIALIZED);
 
@@ -1270,7 +1335,8 @@ bool OrchDaemon::warmRestartCheck()
     std::vector<swss::FieldValueTuple> values;
     std::string op = "orchagent";
     std::string data = "READY";
-    bool ret = true;
+    bool ret = !miniswitch::enabled();
+    if (miniswitch::enabled()) data = "NOT_READY";
 
     vector<string> ts;
     getTaskToSync(ts);

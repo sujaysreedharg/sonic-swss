@@ -28,6 +28,7 @@ extern "C" {
 #include "orch_zmq_config.h"
 #include "sai_serialize.h"
 #include "saihelper.h"
+#include "miniswitchl2.h"
 #include "notifications.h"
 #include <signal.h>
 #include "warm_restart.h"
@@ -611,10 +612,27 @@ int main(int argc, char **argv)
     initSaiFailureTable();
     setSaiFailureStatus(false);
 
+    if (miniswitch::enabled())
+    {
+        DBConnector profileConfig("CONFIG_DB", 0);
+        DBConnector profileState("STATE_DB", 0);
+        string reason;
+        if (WarmStart::isWarmStart() || gRingMode || macsec_post_enabled ||
+            gRedisCommunicationMode != SAI_REDIS_COMMUNICATION_MODE_REDIS_SYNC ||
+            !zmq_server_address.empty() || !miniswitch::validateDatabase(&profileConfig, reason))
+        {
+            if (reason.empty()) reason = "MiniSwitch requires cold redis_sync without ring, MACsec or ZMQ";
+            miniswitch::publishStatus(&profileState, false, reason);
+            SWSS_LOG_ERROR("MiniSwitch profile rejected: %s", reason.c_str());
+            return EXIT_FAILURE;
+        }
+        miniswitch::publishStatus(&profileState, true, "cold preflight accepted");
+    }
+
     /* Initialize sairedis */
     initSaiApi();
     initSaiRedis();
-    initFlexCounterTables();
+    if (!miniswitch::enabled()) initFlexCounterTables();
 
     /* Initialize remaining recorder parameters  */
     Recorder::Instance().swss.setRecord(
@@ -658,6 +676,11 @@ int main(int argc, char **argv)
 
     // Get switch_type
     getCfgSwitchType(&config_db, gMySwitchType, gMySwitchSubType);
+    if (miniswitch::enabled() && (gMySwitchType != "npu" || !gMySwitchSubType.empty()))
+    {
+        SWSS_LOG_ERROR("MiniSwitch supports only a normal NPU fixed L2 profile");
+        return EXIT_FAILURE;
+    }
 
     sai_attribute_t attr;
     vector<sai_attribute_t> attrs;
@@ -950,34 +973,42 @@ int main(int argc, char **argv)
             }
         }
 
-        /* Create a loopback underlay router interface */
-        vector<sai_attribute_t> underlay_intf_attrs;
-
-        sai_attribute_t underlay_intf_attr;
-        underlay_intf_attr.id = SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID;
-        underlay_intf_attr.value.oid = gVirtualRouterId;
-        underlay_intf_attrs.push_back(underlay_intf_attr);
-
-        underlay_intf_attr.id = SAI_ROUTER_INTERFACE_ATTR_TYPE;
-        underlay_intf_attr.value.s32 = SAI_ROUTER_INTERFACE_TYPE_LOOPBACK;
-        underlay_intf_attrs.push_back(underlay_intf_attr);
-
-        underlay_intf_attr.id = SAI_ROUTER_INTERFACE_ATTR_MTU;
-        underlay_intf_attr.value.u32 = UNDERLAY_RIF_DEFAULT_MTU;
-        underlay_intf_attrs.push_back(underlay_intf_attr);
-
-        status = sai_router_intfs_api->create_router_interface(&gUnderlayIfId, gSwitchId, (uint32_t)underlay_intf_attrs.size(), underlay_intf_attrs.data());
-        if (status != SAI_STATUS_SUCCESS)
+        if (!miniswitch::enabled())
         {
-            SWSS_LOG_ERROR("Failed to create underlay router interface %d", status);
-            handleSaiFailure(SAI_API_ROUTER_INTERFACE, "create", status, true);
+            /* Create a loopback underlay router interface */
+            vector<sai_attribute_t> underlay_intf_attrs;
+
+            sai_attribute_t underlay_intf_attr;
+            underlay_intf_attr.id = SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID;
+            underlay_intf_attr.value.oid = gVirtualRouterId;
+            underlay_intf_attrs.push_back(underlay_intf_attr);
+
+            underlay_intf_attr.id = SAI_ROUTER_INTERFACE_ATTR_TYPE;
+            underlay_intf_attr.value.s32 = SAI_ROUTER_INTERFACE_TYPE_LOOPBACK;
+            underlay_intf_attrs.push_back(underlay_intf_attr);
+
+            underlay_intf_attr.id = SAI_ROUTER_INTERFACE_ATTR_MTU;
+            underlay_intf_attr.value.u32 = UNDERLAY_RIF_DEFAULT_MTU;
+            underlay_intf_attrs.push_back(underlay_intf_attr);
+
+            status = sai_router_intfs_api->create_router_interface(&gUnderlayIfId, gSwitchId, (uint32_t)underlay_intf_attrs.size(), underlay_intf_attrs.data());
+            if (status != SAI_STATUS_SUCCESS)
+            {
+                SWSS_LOG_ERROR("Failed to create underlay router interface %d", status);
+                handleSaiFailure(SAI_API_ROUTER_INTERFACE, "create", status, true);
+            }
+
+            SWSS_LOG_NOTICE("Created underlay router interface ID %" PRIx64, gUnderlayIfId);
+
+            /* Initialize orchestration components */
+
+            init_gearbox_phys(&appl_db);
         }
-
-        SWSS_LOG_NOTICE("Created underlay router interface ID %" PRIx64, gUnderlayIfId);
-
-        /* Initialize orchestration components */
-
-        init_gearbox_phys(&appl_db);
+        else
+        {
+            gUnderlayIfId = SAI_NULL_OBJECT_ID;
+            SWSS_LOG_NOTICE("MiniSwitch fixed L2: no router interface or gearbox created");
+        }
     }
 
     shared_ptr<OrchDaemon> orchDaemon;

@@ -1,0 +1,51 @@
+name: MiniSwitch real ARM64 SWSS compile
+"on":
+  workflow_dispatch:
+  push:
+    branches: [mini-switch/l2-linux-validation-20261007]
+permissions:
+  contents: read
+concurrency:
+  group: mini-switch-linux-compile
+  cancel-in-progress: false
+jobs:
+  compile:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Record runner and storage
+        run: |
+          uname -a
+          df -h
+          docker system df
+          test "$(uname -m)" = aarch64
+          python3 - <<'PY'
+          import shutil
+          # A bounded planning check, not a claim about expanded image size.
+          assert shutil.disk_usage('.').free >= 12 * 1024**3, 'Less than 12 GiB free on disposable runner'
+          PY
+      - name: Pull pinned official ARM64 build image
+        run: docker pull sonicdev-microsoft.azurecr.io/sonic-slave-bookworm@sha256:f0553eaa83e204edd30b3bcb06bbb353c27d65129a0115b1a0604b646ea36c1a
+      - name: Compile complete adapted SWSS with authenticated official dependencies
+        run: |
+          docker run --rm --user 0:0 \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/work" \
+            --workdir /work \
+            sonicdev-microsoft.azurecr.io/sonic-slave-bookworm@sha256:f0553eaa83e204edd30b3bcb06bbb353c27d65129a0115b1a0604b646ea36c1a \
+            bash /work/mini-switch-ci/build.sh
+      - name: Preserve bounded compiler evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mini-switch-arm64-swss-evidence
+          path: |
+            mini-switch-ci-out/*.json
+            mini-switch-ci-out/*.log
+            mini-switch-ci-out/*.txt
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 9

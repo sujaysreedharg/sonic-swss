@@ -15,11 +15,13 @@ extern "C" {
 #include "directory.h"
 #include "flow_counter_handler.h"
 #include "timer.h"
+#include "miniswitchl2.h"
 
 #include <inttypes.h>
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <stdexcept>
 
 using namespace swss;
 using namespace std;
@@ -200,6 +202,13 @@ CoppOrch::CoppOrch(DBConnector* db, string tableName) :
     m_trapTable(std::unique_ptr<Table>(new Table(m_state_db.get(), STATE_COPP_TRAP_TABLE_NAME)))
 {
     SWSS_LOG_ENTER();
+    if (miniswitch::enabled())
+    {
+        publishTrapIdsCapability();
+        initMiniSwitchL2();
+        return;
+    }
+
     auto intervT = timespec { .tv_sec = FLEX_COUNTER_UPD_INTERVAL , .tv_nsec = 0 };
     m_FlexCounterUpdTimer = new SelectableTimer(intervT);
     auto executorT = new ExecutableTimer(m_FlexCounterUpdTimer, this, "FLEX_COUNTER_UPD_TIMER");
@@ -240,6 +249,27 @@ void CoppOrch::updateTrapOperStatus(sai_hostif_trap_type_t trap_type, const stri
 void CoppOrch::publishTrapIdsCapability()
 {
     SWSS_LOG_ENTER();
+
+    if (miniswitch::enabled())
+    {
+        supported_trap_ids.clear();
+        int32_t trap_type = 0;
+        sai_s32_list_t capability = {1, &trap_type};
+        const sai_status_t status = sai_query_attribute_enum_values_capability(
+            gSwitchId, SAI_OBJECT_TYPE_HOSTIF_TRAP,
+            SAI_HOSTIF_TRAP_ATTR_TRAP_TYPE, &capability);
+        if (status != SAI_STATUS_SUCCESS || capability.count != 1 ||
+            trap_type != SAI_HOSTIF_TRAP_TYPE_LLDP)
+        {
+            m_trapCapabilityTable->set("traps", {{"trap_ids", ""}});
+            SWSS_LOG_ERROR("MiniSwitchL2 requires the explicit LLDP-only trap capability, rv:%d", status);
+            throw runtime_error("MiniSwitchL2 LLDP capability discovery failed");
+        }
+
+        supported_trap_ids.insert(SAI_HOSTIF_TRAP_TYPE_LLDP);
+        m_trapCapabilityTable->set("traps", {{"trap_ids", "lldp"}});
+        return;
+    }
 
     sai_s32_list_t enum_values_capability;
 
@@ -297,6 +327,153 @@ void CoppOrch::publishTrapIdsCapability()
     vector<FieldValueTuple> trapCapabilityFvs;
     trapCapabilityFvs.push_back(FieldValueTuple("trap_ids", trap_id_list_str));
     m_trapCapabilityTable->set("traps", trapCapabilityFvs);
+}
+
+void CoppOrch::initMiniSwitchL2()
+{
+    SWSS_LOG_ENTER();
+
+    if (!isTrapIdSupported(SAI_HOSTIF_TRAP_TYPE_LLDP))
+    {
+        SWSS_LOG_ERROR("MiniSwitchL2 cannot install an unsupported LLDP trap");
+        throw runtime_error("MiniSwitchL2 LLDP trap is unsupported");
+    }
+
+    sai_attribute_t group_attr = {};
+    group_attr.id = SAI_SWITCH_ATTR_DEFAULT_TRAP_GROUP;
+    sai_status_t status = sai_switch_api->get_switch_attribute(gSwitchId, 1, &group_attr);
+    if (status != SAI_STATUS_SUCCESS || group_attr.value.oid == SAI_NULL_OBJECT_ID)
+    {
+        SWSS_LOG_ERROR("MiniSwitchL2 default trap group discovery failed, rv:%d", status);
+        throw runtime_error("MiniSwitchL2 default trap group discovery failed");
+    }
+    const sai_object_id_t group_id = group_attr.value.oid;
+
+    sai_attribute_t table_attrs[2] = {};
+    table_attrs[0].id = SAI_HOSTIF_TABLE_ENTRY_ATTR_TYPE;
+    table_attrs[0].value.s32 = SAI_HOSTIF_TABLE_ENTRY_TYPE_WILDCARD;
+    table_attrs[1].id = SAI_HOSTIF_TABLE_ENTRY_ATTR_CHANNEL_TYPE;
+    table_attrs[1].value.s32 = SAI_HOSTIF_TABLE_ENTRY_CHANNEL_TYPE_NETDEV_PHYSICAL_PORT;
+    sai_object_id_t table_id = SAI_NULL_OBJECT_ID;
+    status = sai_hostif_api->create_hostif_table_entry(&table_id, gSwitchId, 2, table_attrs);
+    if (status != SAI_STATUS_SUCCESS || table_id == SAI_NULL_OBJECT_ID)
+    {
+        SWSS_LOG_ERROR("MiniSwitchL2 wildcard physical hostif channel creation failed, rv:%d", status);
+        throw runtime_error("MiniSwitchL2 wildcard physical hostif channel creation failed");
+    }
+
+    sai_attribute_t trap_attrs[3] = {};
+    trap_attrs[0].id = SAI_HOSTIF_TRAP_ATTR_TRAP_TYPE;
+    trap_attrs[0].value.s32 = SAI_HOSTIF_TRAP_TYPE_LLDP;
+    trap_attrs[1].id = SAI_HOSTIF_TRAP_ATTR_PACKET_ACTION;
+    trap_attrs[1].value.s32 = SAI_PACKET_ACTION_TRAP;
+    trap_attrs[2].id = SAI_HOSTIF_TRAP_ATTR_TRAP_GROUP;
+    trap_attrs[2].value.oid = group_id;
+    sai_object_id_t trap_id = SAI_NULL_OBJECT_ID;
+    status = sai_hostif_api->create_hostif_trap(&trap_id, gSwitchId, 3, trap_attrs);
+    if (status != SAI_STATUS_SUCCESS || trap_id == SAI_NULL_OBJECT_ID)
+    {
+        // Constructor failure must not leave a newly-created wildcard entry behind.
+        const sai_status_t cleanup_status = sai_hostif_api->remove_hostif_table_entry(table_id);
+        if (cleanup_status != SAI_STATUS_SUCCESS)
+        {
+            SWSS_LOG_ERROR("MiniSwitchL2 wildcard channel rollback failed, rv:%d", cleanup_status);
+        }
+        updateTrapOperStatus(SAI_HOSTIF_TRAP_TYPE_LLDP, "not-installed");
+        SWSS_LOG_ERROR("MiniSwitchL2 LLDP trap creation failed, rv:%d", status);
+        throw runtime_error("MiniSwitchL2 LLDP trap creation failed");
+    }
+
+    m_trap_group_map[default_trap_group] = group_id;
+    m_syncdTrapIds[SAI_HOSTIF_TRAP_TYPE_LLDP] = {trap_id, group_id, SAI_HOSTIF_TRAP_TYPE_LLDP};
+    updateTrapOperStatus(SAI_HOSTIF_TRAP_TYPE_LLDP, "installed");
+    SWSS_LOG_NOTICE("MiniSwitchL2 installed fixed LLDP trap in the existing default group");
+}
+
+task_process_status CoppOrch::processMiniSwitchL2Rule(const KeyOpFieldsValuesTuple& tuple)
+{
+    const string group_name = kfvKey(tuple);
+    const string op = kfvOp(tuple);
+    const vector<FieldValueTuple>& fields = kfvFieldsValues(tuple);
+    string reason;
+    set<string> seen;
+    bool have_ids = false;
+    bool have_action = false;
+
+    if (group_name != default_trap_group || op != SET_COMMAND)
+    {
+        reason = "MiniSwitchL2 has one immutable default LLDP trap group";
+    }
+    else
+    {
+        for (const auto& field : fields)
+        {
+            const string name = fvField(field);
+            const string value = fvValue(field);
+            if (!seen.insert(name).second)
+            {
+                reason = "duplicate CoPP field: " + name;
+                break;
+            }
+            if (name == copp_trap_id_list && value == "lldp")
+            {
+                have_ids = true;
+            }
+            else if (name == copp_trap_action_field && value == "trap")
+            {
+                have_action = true;
+            }
+            else
+            {
+                reason = "unsupported fixed-profile CoPP field or value: " + name;
+                break;
+            }
+        }
+        if (reason.empty() && (!have_ids || !have_action))
+        {
+            reason = "fixed LLDP declaration requires trap_ids=lldp and trap_action=trap";
+        }
+    }
+
+    if (!reason.empty())
+    {
+        m_trapTable->set(group_name, {{"config_status", "rejected"}, {"reason", reason}});
+        for (const auto& field : fields)
+        {
+            if (fvField(field) != copp_trap_id_list)
+            {
+                continue;
+            }
+            for (const auto& trap_name : tokenize(fvValue(field), list_item_delimiter))
+            {
+                if (trap_name != "lldp")
+                {
+                    m_trapTable->set(trap_name, {{"hw_status", "unsupported"},
+                                              {"config_status", "rejected"}, {"reason", reason}});
+                }
+            }
+        }
+        SWSS_LOG_ERROR("MiniSwitchL2 rejected CoPP %s %s: %s", op.c_str(), group_name.c_str(), reason.c_str());
+        return task_process_status::task_invalid_entry;
+    }
+
+    const auto group = m_trap_group_map.find(default_trap_group);
+    const auto trap = m_syncdTrapIds.find(SAI_HOSTIF_TRAP_TYPE_LLDP);
+    if (group == m_trap_group_map.end() || group->second == SAI_NULL_OBJECT_ID ||
+        trap == m_syncdTrapIds.end() || trap->second.trap_obj == SAI_NULL_OBJECT_ID ||
+        trap->second.trap_group_obj != group->second ||
+        trap->second.trap_type != SAI_HOSTIF_TRAP_TYPE_LLDP ||
+        m_trap_group_map.size() != 1 || m_syncdTrapIds.size() != 1)
+    {
+        m_trapTable->set(group_name, {{"config_status", "failed"},
+                                    {"reason", "fixed LLDP objects are unavailable"}});
+        SWSS_LOG_ERROR("MiniSwitchL2 fixed LLDP objects unavailable");
+        return task_process_status::task_failed;
+    }
+
+    // This exact declaration is idempotent because the constructor installed the real objects.
+    m_trapTable->set(group_name, {{"config_status", "applied"}, {"reason", "fixed LLDP declaration"}});
+    return task_process_status::task_success;
 }
 
 void CoppOrch::initDefaultHostIntfTable()
@@ -882,6 +1059,17 @@ void CoppOrch::doTask(Consumer &consumer)
     SWSS_LOG_ENTER();
     string table_name = consumer.getTableName();
 
+    if (miniswitch::enabled())
+    {
+        for (auto it = consumer.m_toSync.begin(); it != consumer.m_toSync.end(); )
+        {
+            // Fixed-profile declarations never reach generic group, policer or trap setters.
+            processMiniSwitchL2Rule(it->second);
+            it = consumer.m_toSync.erase(it);
+        }
+        return;
+    }
+
     if (!gPortsOrch->allPortsReady())
     {
         return;
@@ -936,6 +1124,11 @@ void CoppOrch::doTask(Consumer &consumer)
 void CoppOrch::doTask(SelectableTimer &timer)
 {
     SWSS_LOG_ENTER();
+
+    if (miniswitch::enabled())
+    {
+        return;
+    }
 
     string value;
     for (auto it = m_pendingAddToFlexCntr.begin(); it != m_pendingAddToFlexCntr.end(); )
@@ -1417,6 +1610,11 @@ bool CoppOrch::removeTrap(sai_object_id_t hostif_trap_id, sai_hostif_trap_type_t
 
 bool CoppOrch::bindTrapCounter(sai_object_id_t hostif_trap_id, sai_hostif_trap_type_t trap_type)
 {
+    if (miniswitch::enabled())
+    {
+        return false;
+    }
+
     auto flex_counters_orch = gDirectory.get<FlexCounterOrch*>();
 
     if (!flex_counters_orch || !flex_counters_orch->getHostIfTrapCounterState())
@@ -1512,6 +1710,11 @@ void CoppOrch::unbindTrapCounter(sai_object_id_t hostif_trap_id)
 
 void CoppOrch::generateHostIfTrapCounterIdList()
 {
+    if (miniswitch::enabled())
+    {
+        return;
+    }
+
     for (const auto &kv : m_syncdTrapIds)
     {
         bindTrapCounter(kv.second.trap_obj, kv.second.trap_type);
@@ -1520,6 +1723,11 @@ void CoppOrch::generateHostIfTrapCounterIdList()
 
 void CoppOrch::clearHostIfTrapCounterIdList()
 {
+    if (miniswitch::enabled())
+    {
+        return;
+    }
+
     for (const auto &kv : m_syncdTrapIds)
     {
         unbindTrapCounter(kv.second.trap_obj);

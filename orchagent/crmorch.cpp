@@ -1,3 +1,4 @@
+#include "miniswitchl2.h"
 #include <sstream>
 #include <inttypes.h>
 
@@ -407,6 +408,7 @@ CrmOrch::CrmOrch(DBConnector *db, string tableName):
 
     for (const auto &res : crmResTypeNameMap)
     {
+        if (miniswitch::enabled() && res.first != CrmResourceType::CRM_FDB_ENTRY) continue;
         m_resourcesMap.emplace(res.first, CrmResourceEntry(res.second, CRM_THRESHOLD_TYPE_DEFAULT, CRM_THRESHOLD_LOW_DEFAULT, CRM_THRESHOLD_HIGH_DEFAULT));
     }
 
