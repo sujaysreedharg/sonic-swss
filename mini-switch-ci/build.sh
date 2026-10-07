@@ -33,11 +33,21 @@ printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
 chmod 0755 /usr/sbin/policy-rc.d
 export DEBIAN_FRONTEND=noninteractive
 export LC_ALL=C
+dpkg-query -W > "$output_dir/installed-packages-before.txt"
+# The pinned image supplies Boost 1.83; generic Debian Boost names select 1.74
+# and conflict with those official SONiC image packages.
+dpkg-query -W libboost1.83-dev libboost-serialization1.83-dev \
+    > "$output_dir/image-boost-version.txt"
+python3 - <<'PY'
+from pathlib import Path
+text = Path('/usr/include/boost/version.hpp').read_text()
+assert '#define BOOST_VERSION 108300' in text, 'Pinned image Boost headers differ'
+PY
 apt-get update > "$output_dir/apt-update.log" 2>&1
 apt-get install -y --no-install-recommends \
     libhiredis-dev libzmq3-dev libdbus-1-dev libteam-dev libjansson-dev \
     libjemalloc-dev nlohmann-json3-dev libprotobuf-dev protobuf-compiler \
-    libgmock-dev libboost-serialization-dev libboost-dev dh-exec \
+    libgmock-dev dh-exec \
     > "$output_dir/apt-tools.log" 2>&1
 python3 "$ci_root/fetch_dependencies.py" "$ci_root/dependencies.json" "$output_dir" \
     > "$output_dir/dependency-download.log" 2>&1
