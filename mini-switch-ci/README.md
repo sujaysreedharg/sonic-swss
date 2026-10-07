@@ -32,7 +32,7 @@ These files contain open-source identities, with no private RTL or vendor implem
 
 ## Stage only the public source candidate
 
-Use a fresh isolated fork branch based on `c65602228bf663c19dbc6a1ea3e2e5684a800af5` with the ten adapted SWSS files matching `adaptation.json`.
+Use a fresh isolated fork branch based on `c65602228bf663c19dbc6a1ea3e2e5684a800af5` with the eleven adapted SWSS files matching `adaptation.json`.
 Copy this directory's regular source/JSON/Markdown files to `mini-switch-ci/` in that branch.
 Do not copy `__pycache__`, reports, private project directories, vendor SAI or RTL.
 Copy `workflow.yml` to `.github/workflows/mini-switch-linux.yml` as well.
@@ -65,14 +65,14 @@ No orchagent process is launched.
 
 The actual build command sequence is `./autogen.sh`, `./configure` and top-level `make -j2`.
 It compiles the complete adapted program with the normal upstream warnings and link rules; it does not extract policy methods or substitute dependency mocks.
-The source hashes must match all ten adapted files.
+The source hashes must match all eleven adapted files.
 The final receipt requires a real Linux ARM64 ELF orchagent and successful complete build exit before recording `PASS`.
 
 ## Evidence and limits
 
 The workflow uploads only small JSON receipts, text package/compiler inventories and build/loader/storage logs for seven days.
 It excludes dependency packages and compiled binaries from upload.
-`build-receipt.json` records the executed checkout, ten source hashes, planned patch identity, pinned image, package provenance and ELF bytes/hash/machine.
+`build-receipt.json` records the executed checkout, eleven source hashes, planned patch identity, pinned image, package provenance and ELF bytes/hash/machine.
 Its success gate also requires all 22 authenticated packages and installed version/architecture identities, successful verification of every pinned SAI header, the exact compile commands, complete compiler/configure/ELF/loader logs and hashes of those artifacts and manifests.
 The receipt explicitly marks dependency sources as upstream-built rather than rebuilt in this job.
 SONiC startup, vendor SAI loading and ASIC traffic remain false even if compilation succeeds.

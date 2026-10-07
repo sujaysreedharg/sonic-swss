@@ -106,6 +106,7 @@ tests_SOURCES = aclorch_ut.cpp \
                 $(top_srcdir)/lib/recorder.cpp \
                 $(top_srcdir)/lib/orch_zmq_config.cpp \
                 $(top_srcdir)/orchagent/orchdaemon.cpp \
+                $(top_srcdir)/orchagent/miniswitchl2.cpp \
                 $(top_srcdir)/orchagent/orch.cpp \
                 $(top_srcdir)/orchagent/notifications.cpp \
                 $(top_srcdir)/orchagent/routeorch.cpp \

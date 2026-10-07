@@ -2,7 +2,7 @@
   "schema_version": 1,
   "base_commit": "c65602228bf663c19dbc6a1ea3e2e5684a800af5",
   "branch": "mini-switch-l2-adapted",
-  "patch_sha256": "c29946a4e6aceb2b24afdf399ebaa17e90593474b86bf145ca9b4376e277f985",
+  "patch_sha256": "87a2664010caa27df15c786d1d56fc474a7a8b6661a406e8b0f1a98184f8247c",
   "sources": [
     {
       "path": "orchagent/Makefile.am",
@@ -43,6 +43,10 @@
     {
       "path": "orchagent/miniswitchl2.h",
       "sha256": "789f55ca106580ff2e7997af113f4dc7c89651c4d97bd3c62131c51195e8032e"
+    },
+    {
+      "path": "tests/mock_tests/Makefile.am",
+      "sha256": "97b74ae6e5a899b030a4112c7536c903515d902b4d3a03ef21d867bb7bfe6faf"
     }
   ],
   "full_swss_compile_executed": false,
