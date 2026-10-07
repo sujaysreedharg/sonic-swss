@@ -8,14 +8,17 @@ output_dir="$source_root/mini-switch-ci-out"
 mkdir -p "$output_dir"
 finish() {
     build_exit=$?
-    python3 "$ci_root/build_receipt.py" --source "$source_root" --ci "$ci_root" \
-        --output "$output_dir" --exit-code "$build_exit" || true
+    if ! python3 "$ci_root/build_receipt.py" --source "$source_root" --ci "$ci_root" \
+        --output "$output_dir" --exit-code "$build_exit"; then
+        if [ "$build_exit" -eq 0 ]; then build_exit=1; fi
+    fi
     exit "$build_exit"
 }
 trap finish EXIT
 [ "$(uname -s)" = Linux ]
 [ "$(uname -m)" = aarch64 ]
 [ "$(dpkg --print-architecture)" = arm64 ]
+python3 -B "$ci_root/test_export_runtime.py" > "$output_dir/export-policy-unit.log" 2>&1
 # The runner-owned bind mount is inspected by container root.
 # Trust only this exact owned checkout inside the disposable container.
 git config --global --add safe.directory "$source_root"
@@ -100,6 +103,9 @@ for path in (root/'orchagent/.libs/orchagent',root/'orchagent/orchagent'):
             break
 else:raise RuntimeError('Real ELF orchagent missing after complete build')
 PY
+python3 -B "$ci_root/export_runtime.py" --source "$source_root" --ci "$ci_root" \
+    --output "$output_dir" > "$output_dir/runtime-export-command.log" 2>&1
 df -h > "$output_dir/storage-after.log"
-# Keep only receipts and logs for upload; do not publish large binaries or dependency debs.
+# Runtime upload is limited to the authenticated stripped six-program archive.
+# Keep dependency package binaries outside both uploaded artifacts.
 find "$output_dir" -maxdepth 1 -type f -name '*.deb' -delete

@@ -46,6 +46,18 @@ jobs:
             mini-switch-ci-out/*.json
             mini-switch-ci-out/*.log
             mini-switch-ci-out/*.txt
+            mini-switch-ci-out/runtime-export/logs/*.log
           if-no-files-found: warn
           retention-days: 7
           compression-level: 9
+      - name: Preserve authenticated stripped public ARM64 runtime subset
+        if: success()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: mini-switch-arm64-swss-runtime
+          path: |
+            mini-switch-ci-out/mini-switch-arm64-runtime.tar.gz
+            mini-switch-ci-out/runtime-export.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
