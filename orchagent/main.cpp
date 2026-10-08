@@ -676,7 +676,9 @@ int main(int argc, char **argv)
 
     // Get switch_type
     getCfgSwitchType(&config_db, gMySwitchType, gMySwitchSubType);
-    if (miniswitch::enabled() && (gMySwitchType != "npu" || !gMySwitchSubType.empty()))
+    // The fixed-L2 policy above validates raw npu metadata.
+    // The upstream parser normalizes that ordinary NPU to switch.
+    if (miniswitch::enabled() && (gMySwitchType != "switch" || !gMySwitchSubType.empty()))
     {
         SWSS_LOG_ERROR("MiniSwitch supports only a normal NPU fixed L2 profile");
         return EXIT_FAILURE;

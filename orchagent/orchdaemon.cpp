@@ -207,7 +207,8 @@ bool OrchDaemon::init()
     if (miniswitch::enabled())
     {
         string reason;
-        if (WarmStart::isWarmStart() || gMySwitchType != "npu" ||
+        // Validate raw npu metadata while checking the upstream-normalized type.
+        if (WarmStart::isWarmStart() || gMySwitchType != "switch" ||
             !miniswitch::validateDatabase(m_configDb, reason))
         {
             miniswitch::publishStatus(m_stateDb, false, reason);

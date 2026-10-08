@@ -2,7 +2,7 @@
   "schema_version": 1,
   "base_commit": "c65602228bf663c19dbc6a1ea3e2e5684a800af5",
   "branch": "mini-switch-l2-adapted",
-  "patch_sha256": "87a2664010caa27df15c786d1d56fc474a7a8b6661a406e8b0f1a98184f8247c",
+  "patch_sha256": "f01d3c656c19468067db1ac38bfa6be087a782c0cc0dc3a23137264646cf6908",
   "sources": [
     {
       "path": "orchagent/Makefile.am",
@@ -10,11 +10,11 @@
     },
     {
       "path": "orchagent/main.cpp",
-      "sha256": "387f5add42ea53c747816d85d86ffca7e1312b6907e3b019229baac461ead712"
+      "sha256": "d8e4b68d53fe95850b9b0c7a4f8b5c2290f3ad192fbf036e9f89d7368552bdea"
     },
     {
       "path": "orchagent/orchdaemon.cpp",
-      "sha256": "451a51bd2627f42ee13b984a102d38da7986228060649b8b8a17370609053466"
+      "sha256": "b0abebf97a790b93edc666f8c287f297b128d466e80162c80267b99e5a9a69ed"
     },
     {
       "path": "orchagent/portsorch.cpp",
