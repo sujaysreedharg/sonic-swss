@@ -68,6 +68,10 @@ The builder checks the raw Image magic, effective memory size, preserved little-
 The effective memory size can exceed the file length because it includes memory-only space.
 It independently repeats the pinned upstream objcopy recipe and requires identical raw bytes, binding the boot payload to the actual linked ELF whose feature symbols were checked.
 It also requires unchanged ELF load addresses and payload hashes after debug stripping.
+The preserved `CONFIG_RELOCATABLE=y` configuration links an `ET_DYN` kernel, following the upstream ARM64 `-shared -Bsymbolic` recipe.
+Run `37706211333` compiled the complete kernel but failed a checker that incorrectly required `ET_EXEC`.
+Its actual linked header, compilation log and failed receipt are retained in the project evidence.
+The corrected checker requires `ET_DYN` explicitly and rejects `ET_EXEC`, other ELF types and other architectures.
 The artifact must be at most 64 MiB before upload.
 This bound includes both kernel formats and all retained evidence, and a build fails if their measured combined size exceeds it.
 The 154,511,164-byte source archive and the expanded build tree are disposable cloud inputs and are not included in that artifact.

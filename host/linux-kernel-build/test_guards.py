@@ -127,10 +127,10 @@ class ConfigurationGuards(unittest.TestCase):
         with patch.object(guard, "HERE", package), self.assertRaises(ValueError):
             guard.inputs()
 
-    def elf_fixture(self, *, payload=b"kernel load bytes", offset=128, machine=183):
+    def elf_fixture(self, *, payload=b"kernel load bytes", offset=128, machine=183, kind=3):
         header = bytearray(64)
         header[:6] = b"\x7fELF\x02\x01"
-        struct.pack_into("<HH", header, 16, 2, machine)
+        struct.pack_into("<HH", header, 16, kind, machine)
         struct.pack_into("<Q", header, 32, 64)
         struct.pack_into("<HH", header, 54, 56, 1)
         program = struct.pack("<IIQQQQQQ", 1, 5, offset, 0x800000, 0x800000,
@@ -156,6 +156,13 @@ class ConfigurationGuards(unittest.TestCase):
         path.write_bytes(path.read_bytes()[:-1])
         with self.assertRaises(ValueError):
             guard.load_segments(path)
+
+    def test_preserved_relocatable_kernel_requires_et_dyn(self):
+        self.assertEqual(guard.config(guard.HERE / "inputs/baseline.config")["CONFIG_RELOCATABLE"], "y")
+        self.assertTrue(guard.load_segments(self.elf_fixture(kind=3)))
+        for kind in (1, 2, 4):
+            with self.subTest(kind=kind), self.assertRaises(ValueError):
+                guard.load_segments(self.elf_fixture(kind=kind))
 
     def image_fixture(self, *, file_bytes=256, image_size=4096, flags=10,
                       magic=0x644D5241, pe_machine=0xAA64, pe_offset=64):

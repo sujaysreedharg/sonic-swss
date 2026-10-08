@@ -118,14 +118,14 @@ def candidate(normalized: Path, selected: Path, pins: dict):
 
 
 def load_segments(path: Path):
-    """Identify executable ARM64 load bytes, excluding nonloaded debug sections."""
+    """Identify the pinned relocatable ARM64 kernel's loaded bytes."""
     size = path.stat().st_size
     records = []
     with path.open("rb") as stream:
         header = stream.read(64)
         require(len(header) == 64 and header[:6] == b"\x7fELF\x02\x01"
-                and struct.unpack_from("<HH", header, 16) == (2, 183),
-                "Not a little-endian 64-bit ARM executable ELF kernel")
+                and struct.unpack_from("<HH", header, 16) == (3, 183),
+                "Not the pinned little-endian ARM64 ET_DYN kernel (CONFIG_RELOCATABLE=y)")
         offset = struct.unpack_from("<Q", header, 32)[0]
         entry_bytes, count = struct.unpack_from("<HH", header, 54)
         require(entry_bytes == 56 and 0 < count <= 256
