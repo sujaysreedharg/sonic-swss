@@ -2,7 +2,7 @@
 
 This is an unbuilt candidate for the existing private ARM64 Linux laboratory.
 No candidate kernel has booted, no default kernel has changed, and no SONiC startup is claimed.
-The workflow is manual and does not run when this branch is pushed.
+The workflow runs only on matching pushes to the isolated `mini-switch/linux-kernel-20261007` branch, with a manual dispatch entry retained for a registered workflow.
 
 The source is real Linux 6.18.35 from kernel.org, pinned to archive SHA-256 `f78602932219125e211c5f5bfd84edcfd4ec5ce88fc944f8248413f665bef236` and stable commit `acb7cf4c1184e27622be0faf89244d5001ed1e87`.
 The original configuration is the actual booted Kata 3.32.0 kernel configuration captured from `/proc/config.gz` on October 7, 2026.
@@ -50,7 +50,7 @@ It verifies the detached developer signature against the decompressed tar stream
 The source tag and peeled commit are also checked against the official stable Git repository.
 The locally retained GitHub maintainer API tag receipt reports a valid signature; this source review is separate from the future builder's actual GPG verification.
 
-The manual workflow uses the documented `ubuntu-24.04-arm` native ARM64 runner with two build jobs and a 75-minute job timeout.
+The isolated workflow uses the documented `ubuntu-24.04-arm` native ARM64 runner with two build jobs and a 75-minute job timeout.
 The kernel compilation command has a 60-minute timeout, and timed-out build process groups are killed together.
 The source download has a five-minute bound and the disposable build requires 12 GiB of free disk before expansion.
 These are cloud build constraints, not minimum requirements for the Mac guest.
@@ -88,6 +88,6 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B host/linux-kernel-build/build.py \
 
 Both paths must be new.
 The prepared workflow is `.github/workflows/mini-switch-kernel.yml` on branch `mini-switch/linux-kernel-20261007`.
-It has not been pushed or dispatched by the author of this candidate.
-After build review, a separately authorized guest boot must verify the exact raw Image hash, unchanged boot services and the actual bridge/VLAN/dummy/netem probes.
+The reviewed candidate has been pushed on that isolated branch; it is not a booted kernel.
+After authenticating a successful build, the guest boot must verify the exact raw Image hash, unchanged boot services and the actual bridge/VLAN/dummy/netem probes.
 The current private runtime helper still pins the original kernel and must not silently accept this candidate.

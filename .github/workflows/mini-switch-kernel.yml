@@ -1,6 +1,12 @@
 name: MiniSwitch bounded ARM64 kernel candidate
 "on":
   workflow_dispatch:
+  push:
+    branches:
+      - mini-switch/linux-kernel-20261007
+    paths:
+      - host/linux-kernel-build/**
+      - .github/workflows/mini-switch-kernel.yml
 permissions:
   contents: read
 concurrency:
