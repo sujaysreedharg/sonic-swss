@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "kernel": {
+    "version": "6.18.35",
+    "archive_url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.35.tar.xz",
+    "archive_bytes": 154511164,
+    "archive_sha256": "f78602932219125e211c5f5bfd84edcfd4ec5ce88fc944f8248413f665bef236",
+    "checksums_url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc",
+    "signature_url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.35.tar.sign",
+    "signer_fingerprint": "647F28654894E3BD457199BE38DBBDC86092693E",
+    "signer_address": "gregkh@kernel.org",
+    "git_url": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git",
+    "tag": "v6.18.35",
+    "tag_object": "1e0ea17e5f018fdbf91c02f030452ea407be729f",
+    "commit": "acb7cf4c1184e27622be0faf89244d5001ed1e87",
+    "tag_api_signature_verified_at_review": true,
+    "arm64_image_makefile_url": "https://raw.githubusercontent.com/gregkh/linux/acb7cf4c1184e27622be0faf89244d5001ed1e87/arch/arm64/boot/Makefile"
+  },
+  "kata": {
+    "version": "3.32.0",
+    "commit": "337b6002681479fb6a605ca8a7a1138e81b6098c",
+    "release_archive_sha256": "8736c054d9223974735394f822000823baef509e1c33405ec798240fa9b6e4b5",
+    "patch_path": "tools/packaging/kernel/patches/6.18.x/0001-fs-dax-check-zero-or-empty-entry-before-converting-xarray.patch",
+    "install_source_url": "https://raw.githubusercontent.com/kata-containers/kata-containers/337b6002681479fb6a605ca8a7a1138e81b6098c/tools/packaging/kernel/build-kernel.sh"
+  },
+  "baseline": {
+    "origin": "Actual booted private Mac ARM64 Linux guest /proc/config.gz captured 2026-10-07",
+    "kernel_release": "6.18.35",
+    "kernel_archive_member": "opt/kata/share/kata-containers/vmlinux-6.18.35-197-debug",
+    "guest_boot_was_observed": true,
+    "candidate_boot_observed": false,
+    "kernel_file_format": "uncompressed ARM64 Image, EFI PE header",
+    "kernel_file_bytes": 30423552,
+    "kernel_file_sha256": "fb2cfb79eb1ae19447a85d75682d7fa5cfec97e24beb2609a492b806e8072c8d",
+    "kernel_header_64_bytes_hex": "4d5a40fa1960581400000000000000000000db01000000000a0000000000000000000000000000000000000000000000000000000000000041524d6440000000",
+    "kernel_text_offset": 0,
+    "kernel_flags": 10,
+    "kernel_efi_stub": true
+  },
+  "compiler": {
+    "command": "gcc-11",
+    "full_version": "11.4.0",
+    "ubuntu_arm64_package_version": "11.4.0-9ubuntu1",
+    "package_reference": "https://packages.ubuntu.com/noble/gcc-11"
+  },
+  "features": {
+    "CONFIG_VLAN_8021Q": "y",
+    "CONFIG_BRIDGE_VLAN_FILTERING": "y",
+    "CONFIG_DUMMY": "y",
+    "CONFIG_NET_SCH_NETEM": "y"
+  },
+  "protected_builtin": [
+    "CONFIG_ARM64",
+    "CONFIG_64BIT",
+    "CONFIG_MMU",
+    "CONFIG_OF",
+    "CONFIG_PCI",
+    "CONFIG_PCI_HOST_GENERIC",
+    "CONFIG_VIRTIO",
+    "CONFIG_VIRTIO_MMIO",
+    "CONFIG_VIRTIO_PCI",
+    "CONFIG_BLK_DEV_INITRD",
+    "CONFIG_VIRTIO_BLK",
+    "CONFIG_VIRTIO_NET",
+    "CONFIG_VIRTIO_FS",
+    "CONFIG_VSOCKETS",
+    "CONFIG_VIRTIO_VSOCKETS",
+    "CONFIG_EXT4_FS",
+    "CONFIG_FUSE_FS",
+    "CONFIG_DEVTMPFS",
+    "CONFIG_TMPFS",
+    "CONFIG_NET_NS",
+    "CONFIG_TUN",
+    "CONFIG_PACKET",
+    "CONFIG_VETH",
+    "CONFIG_BRIDGE",
+    "CONFIG_IKCONFIG",
+    "CONFIG_IKCONFIG_PROC",
+    "CONFIG_ARM_GIC_V3",
+    "CONFIG_SERIAL_AMBA_PL011",
+    "CONFIG_VIRTIO_CONSOLE",
+    "CONFIG_FS_DAX",
+    "CONFIG_FUSE_DAX",
+    "CONFIG_DAX",
+    "CONFIG_LIBNVDIMM",
+    "CONFIG_NVDIMM_DAX",
+    "CONFIG_BLK_DEV_PMEM",
+    "CONFIG_VIRTIO_PMEM",
+    "CONFIG_VIRTIO_VSOCKETS_COMMON",
+    "CONFIG_DEVTMPFS_MOUNT",
+    "CONFIG_RD_GZIP",
+    "CONFIG_BINFMT_ELF",
+    "CONFIG_BINFMT_SCRIPT",
+    "CONFIG_PROC_FS",
+    "CONFIG_SYSFS",
+    "CONFIG_ARM_ARCH_TIMER",
+    "CONFIG_ARM_PSCI_FW",
+    "CONFIG_SERIAL_AMBA_PL011_CONSOLE",
+    "CONFIG_HVC_DRIVER"
+  ],
+  "compiler_metadata_change_allowlist": [
+    "CONFIG_CC_VERSION_TEXT",
+    "CONFIG_AS_VERSION",
+    "CONFIG_LD_VERSION",
+    "CONFIG_PAHOLE_VERSION"
+  ],
+  "artifact_limit_bytes": 67108864,
+  "build_jobs": 2,
+  "build_timeout_seconds": 3600,
+  "files": {
+    "inputs/baseline-identity.json": {
+      "bytes": 200,
+      "sha256": "a3f4406f73030c7a36334a21e239fde5c213593233c0a99e2505e76772c24814"
+    },
+    "inputs/baseline.config": {
+      "bytes": 97211,
+      "sha256": "a5dfc1ee37dcd4bc6d727e4de617bc45a40cf32e7ebc52fb6f0472c8fbf60c21"
+    },
+    "inputs/baseline.config.gz": {
+      "bytes": 22073,
+      "sha256": "7edda9630fe381c9e97a1193c20b0807d34cc859a0d302d8d4b311a52e0fdfb4"
+    },
+    "inputs/kata-dax.patch": {
+      "bytes": 7434,
+      "sha256": "92dd4a192ea58fa9a59e3bc6d6995e2a156cf862c36a3c10eb212fabdecdaf03"
+    },
+    "inputs/kata-kernel-readme.md": {
+      "bytes": 5464,
+      "sha256": "3b4d68b6b5c8f7b19d9b12b5df4e164e256f282e0e7645ee3ae1ba6f9fbe5305"
+    },
+    "inputs/linux-release-tag.json": {
+      "bytes": 2584,
+      "sha256": "3e2cf484bf3407ca407f0bd3561dc53137bc7887ab93e7f3f30089e96dbbdd5a"
+    },
+    "inputs/linux-release.tar.sign": {
+      "bytes": 991,
+      "sha256": "3ab523660ccff4ee386a36aab368fc5d64bb7611afc21591a970a8bbeb9e5ca0"
+    },
+    "inputs/arm64-boot-Makefile": {
+      "bytes": 1538,
+      "sha256": "4f40f40d639364121150113999a06d3a9d7441c6f7c607992560fc0655488b10"
+    },
+    "inputs/kata-build-kernel.sh": {
+      "bytes": 25610,
+      "sha256": "e635f736a628a4b4c1281facfbf09c2448137bee5a94e4bf8fcb1f734e94d708"
+    }
+  },
+  "reviewed_official_references": [
+    "https://www.kernel.org/signature.html",
+    "https://github.com/kata-containers/kata-containers/blob/3.32.0/tools/packaging/kernel/README.md",
+    "https://github.com/gregkh/linux/blob/acb7cf4c1184e27622be0faf89244d5001ed1e87/net/bridge/Kconfig",
+    "https://github.com/gregkh/linux/blob/acb7cf4c1184e27622be0faf89244d5001ed1e87/net/sched/Kconfig",
+    "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+    "https://raw.githubusercontent.com/kata-containers/kata-containers/337b6002681479fb6a605ca8a7a1138e81b6098c/tools/packaging/kernel/build-kernel.sh",
+    "https://raw.githubusercontent.com/gregkh/linux/acb7cf4c1184e27622be0faf89244d5001ed1e87/arch/arm64/boot/Makefile",
+    "https://docs.kernel.org/arch/arm64/booting.html"
+  ]
+}

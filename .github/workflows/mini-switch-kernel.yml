@@ -1,0 +1,58 @@
+name: MiniSwitch bounded ARM64 kernel candidate
+"on":
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mini-switch-kernel-candidate
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 75
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Check native runner and reviewed source inputs
+        run: |
+          test "$(uname -m)" = aarch64
+          python3 -B host/linux-kernel-build/guard.py
+          python3 -B host/linux-kernel-build/test_guards.py
+      - name: Install reviewed compiler and kernel build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential flex bison libelf-dev libssl-dev dwarves bc xz-utils gnupg git \
+            gcc-11=11.4.0-9ubuntu1 cpp-11=11.4.0-9ubuntu1 \
+            gcc-11-base=11.4.0-9ubuntu1 libgcc-11-dev=11.4.0-9ubuntu1
+          test "$(gcc-11 -dumpfullversion)" = 11.4.0
+      - name: Build authenticated candidate without installation or boot
+        run: |
+          python3 -B host/linux-kernel-build/build.py \
+            --work "$RUNNER_TEMP/mini-switch-kernel-source" \
+            --output "$GITHUB_WORKSPACE/kernel-build-out"
+      - name: Enforce artifact bound
+        id: artifact-bound
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          root = Path('kernel-build-out')
+          assert root.is_dir(), 'Build output absent; no fabricated receipt or artifact'
+          paths = [p for p in root.rglob('*') if p.is_file()]
+          total = sum(p.stat().st_size for p in paths)
+          assert total <= 64 * 1024 * 1024, f'Artifact exceeds 64 MiB: {total} bytes'
+          print(f'Bounded actual kernel evidence: {len(paths)} files, {total} bytes')
+          PY
+      - name: Preserve bounded actual build or failure evidence
+        if: always() && steps.artifact-bound.outcome == 'success'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: mini-switch-arm64-kernel-candidate
+          path: kernel-build-out/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
