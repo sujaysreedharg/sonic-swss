@@ -110,7 +110,7 @@ def main():
                                "dumpfullversion": version}
         command("compiler-version", ["gcc-11", "--version"])
         command("package-versions", ["dpkg-query", "-W", "gcc-11", "cpp-11", "gcc-11-base",
-                                     "libgcc-11-dev", "binutils", "dwarves", "libelf-dev", "libssl-dev"])
+                                     "libgcc-11-dev", "libasan6", "libtsan0", "binutils", "dwarves", "libelf-dev", "libssl-dev"])
         command("stable-release-refs", ["git", "ls-remote", pins["kernel"]["git_url"],
                                        "refs/tags/v6.18.35", "refs/tags/v6.18.35^{}"], timeout=120)
         refs = (output / "stable-release-refs.log").read_text()

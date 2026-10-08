@@ -39,6 +39,9 @@ Critical existing built-ins are checked separately.
 
 Current Ubuntu updates can provide GCC 11.5, which changes compiler capability flags.
 The workflow pins the matching ARM64 GCC 11.4.0 package and dependencies and refuses a different `gcc-11 -dumpfullversion` result.
+The first actual cloud attempt failed before compilation because unpinned libasan6 and libtsan0 selected GCC 11.5 dependencies.
+Those two runtime packages are now also pinned to `11.4.0-9ubuntu1`, following the exact base-package dependency in [Ubuntu metadata](https://packages.ubuntu.com/noble/arm64/libasan6).
+The disposable cloud runner explicitly permits those reviewed package downgrades; the Mac guest is unchanged.
 See the official [Ubuntu package inventory](https://packages.ubuntu.com/noble/gcc-11).
 Compiler binary hashes, package versions, all actual command arguments and logs are retained.
 The subprocess tool search uses standard Ubuntu package directories, keeping runner-managed Rustup out of the captured configuration.

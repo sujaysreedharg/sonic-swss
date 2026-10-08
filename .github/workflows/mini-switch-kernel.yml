@@ -30,10 +30,11 @@ jobs:
       - name: Install reviewed compiler and kernel build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
+          sudo apt-get install --no-install-recommends --allow-downgrades -y \
             build-essential flex bison libelf-dev libssl-dev dwarves bc xz-utils gnupg git \
             gcc-11=11.4.0-9ubuntu1 cpp-11=11.4.0-9ubuntu1 \
-            gcc-11-base=11.4.0-9ubuntu1 libgcc-11-dev=11.4.0-9ubuntu1
+            gcc-11-base=11.4.0-9ubuntu1 libgcc-11-dev=11.4.0-9ubuntu1 \
+            libasan6=11.4.0-9ubuntu1 libtsan0=11.4.0-9ubuntu1
           test "$(gcc-11 -dumpfullversion)" = 11.4.0
       - name: Build authenticated candidate without installation or boot
         run: |
